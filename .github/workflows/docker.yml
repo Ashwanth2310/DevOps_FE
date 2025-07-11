@@ -27,3 +27,19 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/devops_fe:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Azure VM via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/devops_fe:latest
+            docker stop devops_fe || true
+            docker rm devops_fe || true
+            docker run -d --name devops_fe -p 80:80 ${{ secrets.DOCKERHUB_USERNAME }}/devops_fe:latest
